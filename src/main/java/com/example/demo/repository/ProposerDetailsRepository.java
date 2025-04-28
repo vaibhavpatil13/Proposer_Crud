@@ -27,4 +27,8 @@ public interface ProposerDetailsRepository extends JpaRepository<ProposerDetails
 	public boolean existsByPanNumber(String panNumber);
 	
 	public boolean existsByProposerEmail(String proposerEmail);
+	
+	@Query("select p from ProposerDetailsEntity p where p.proposerId = :proposerId and p.status =:status")
+	public Optional<ProposerDetailsEntity> findById(@Param("proposerId") Integer proposerId, @Param("status") String status);
+	
 }

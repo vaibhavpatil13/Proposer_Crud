@@ -1,9 +1,13 @@
 package com.example.demo.service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,26 +31,27 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Service
 public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 	@Autowired
 	private ProposerDetailsRepository proposerDetailsRepository;
-	
+
 	@Autowired
 	private Validations validations;
-	
+
 	@Autowired
 	private NomineeRepository nomineeRepository;
-	
+
 	@Autowired
 	private EntityManager entityManager;
-	
-	
+
 	@Override
 	public String saveProposer(RequestDto requestDto) {
-		
+
 		ProposerDetailsEntity add = new ProposerDetailsEntity();
 
 		String missingFields = validations.checkConditions(requestDto, new ArrayList<>());
@@ -157,11 +162,11 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 		ProposerDetailsEntity proposerSave = proposerDetailsRepository.save(add);
 		Integer proposerId = proposerSave.getProposerId();
-		
+
 		NomineeDto dto = requestDto.getNomineeDetailsEntities();
-		
+
 		NomineeDetailsEntity entity = new NomineeDetailsEntity();
-		
+
 		entity.setProposerId(proposerId);
 		entity.setAddress(dto.getAddress());
 		entity.setDateOfBirth(dto.getDateOfBirth());
@@ -169,9 +174,8 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		entity.setMobileNo(dto.getMobileNo());
 		entity.setNomineeName(dto.getNomineeName());
 		entity.setRelationWithProposer(dto.getRelationWithProposer());
-		
+
 		nomineeRepository.save(entity);
-		
 
 //		List<NomineeDto> nomineeDtos = requestDto.getNomineeDetailsEntities();
 //
@@ -200,7 +204,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	public List<ProposerDetailsEntity> getAll(ProposerPagination pagination) {
 
 		// List<ProposerDetailsEntity> list =
-		// proposerDetailsRepository.getAllActiveStatus("Yes");                                                          
+		// proposerDetailsRepository.getAllActiveStatus("Yes");
 
 //		StringBuilder builder = new StringBuilder("select p from ProposerDetailsEntity p where p.status = 'Yes'");
 //
@@ -244,35 +248,30 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		predicates.add(cb.equal(root.get("status"), "Yes"));
 
 		Searching searching = pagination.getSearching();
-		
-	
+
 		if (searching != null) {
 
 			String firstName = searching.getProposerFirstName();
 
-			if (firstName != null && !firstName.isEmpty()) 
-			{
+			if (firstName != null && !firstName.isEmpty()) {
 				predicates.add(cb.like(cb.lower(root.get("proposerFirstName")), "%" + firstName.toLowerCase() + "%"));
 			}
 
 			String lastName = searching.getProposerLastName();
 
-			if (lastName != null && !lastName.isEmpty()) 
-			{
+			if (lastName != null && !lastName.isEmpty()) {
 				predicates.add(cb.like(cb.lower(root.get("proposerLastName")), "%" + lastName.toLowerCase() + "%"));
 			}
 
 			String city = searching.getCity();
 
-			if (city != null && !city.isEmpty())
-			{
+			if (city != null && !city.isEmpty()) {
 				predicates.add(cb.like(cb.lower(root.get("city")), "%" + city.toLowerCase() + "%"));
 			}
 
 			Long mobileNo = searching.getProposerMobileNo();
 
-			if (mobileNo != null && !mobileNo.toString().isEmpty() && mobileNo > 0) 
-			{
+			if (mobileNo != null && !mobileNo.toString().isEmpty() && mobileNo > 0) {
 				predicates.add(cb.equal(root.get("proposerMobileNo"), mobileNo));
 			}
 
@@ -282,23 +281,19 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 		String sortBy = pagination.getSortBy();
 
-		if (sortBy == null || sortBy.isEmpty())
-		{
+		if (sortBy == null || sortBy.isEmpty()) {
 			sortBy = "proposerId";
 		}
 
 		String sortOrder = pagination.getSortOrder();
-		
-		if (sortOrder == null || sortOrder.isEmpty())
-		{
+
+		if (sortOrder == null || sortOrder.isEmpty()) {
 			sortOrder = "desc";
 		}
 
-		if (sortOrder.equalsIgnoreCase("desc"))
-		{
+		if (sortOrder.equalsIgnoreCase("desc")) {
 			cq.orderBy(cb.desc(root.get(sortBy)));
-		} else
-		{
+		} else {
 			cq.orderBy(cb.asc(root.get(sortBy)));
 		}
 
@@ -316,9 +311,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 			query.setMaxResults(size);
 
 		} else if ((page == 0 && size > 0) || (page > 0 && size == 0)) {
-			
+
 			throw new IllegalArgumentException("page or size can't be zero");
-			
+
 		}
 
 		return query.getResultList();
@@ -380,7 +375,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //		}
 
 	}
-    
+
 	@Override
 	public String update(Integer id, RequestDto requestDto) {
 		Optional<ProposerDetailsEntity> opt = proposerDetailsRepository.findByProposerIdAndStatus(id, "Yes");
@@ -395,90 +390,89 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //				throw new IllegalArgumentException("Missing required fields: " + String.join(", ", missingFields));
 //				// return "Missing required fields: " + String.join(", ", missingFields);
 //			}
-			
-			if(requestDto.getTitle()!=null && !requestDto.getTitle().toString().isEmpty()) {
+
+			if (requestDto.getTitle() != null && !requestDto.getTitle().toString().isEmpty()) {
 				existingProposer.setTitle(requestDto.getTitle());
 			}
-			
+
 			// existingProposer.setProposerFullName(requestDto.getProposerFullName());
-			if(requestDto.getProposerGender()!=null && !requestDto.getProposerGender().toString().isEmpty()) {
+			if (requestDto.getProposerGender() != null && !requestDto.getProposerGender().toString().isEmpty()) {
 				existingProposer.setProposerGender(requestDto.getProposerGender());
 			}
-			
-			
-			if(requestDto.getProposerFirstName()!=null && !requestDto.getProposerFirstName().isEmpty()) {
+
+			if (requestDto.getProposerFirstName() != null && !requestDto.getProposerFirstName().isEmpty()) {
 				existingProposer.setProposerFirstName(requestDto.getProposerFirstName());
 			}
-			//existingProposer.setProposerFirstName(requestDto.getProposerFirstName());
-			if(requestDto.getProposerMiddleName()!=null && !requestDto.getProposerMiddleName().isEmpty()) {
+			// existingProposer.setProposerFirstName(requestDto.getProposerFirstName());
+			if (requestDto.getProposerMiddleName() != null && !requestDto.getProposerMiddleName().isEmpty()) {
 				existingProposer.setProposerMiddleName(requestDto.getProposerMiddleName());
 			}
-			
-			if(requestDto.getProposerLastName()!=null && !requestDto.getProposerLastName().isEmpty()) {
+
+			if (requestDto.getProposerLastName() != null && !requestDto.getProposerLastName().isEmpty()) {
 				existingProposer.setProposerLastName(requestDto.getProposerLastName());
 			}
-			
-			if(requestDto.getDateOfBirth()!=null && !requestDto.getDateOfBirth().toString().isEmpty()) {
+
+			if (requestDto.getDateOfBirth() != null && !requestDto.getDateOfBirth().toString().isEmpty()) {
 				existingProposer.setDateOfBirth(requestDto.getDateOfBirth());
 			}
-			
-			if(requestDto.getPanNumber()!=null && !requestDto.getPanNumber().isEmpty()) {
+
+			if (requestDto.getPanNumber() != null && !requestDto.getPanNumber().isEmpty()) {
 				existingProposer.setPanNumber(requestDto.getPanNumber());
 			}
-			
-			if(requestDto.getAadharNo()!=null && !requestDto.getAadharNo().toString().isEmpty()) {
+
+			if (requestDto.getAadharNo() != null && !requestDto.getAadharNo().toString().isEmpty()) {
 				existingProposer.setAadharNo(requestDto.getAadharNo());
 			}
-			
-			if(requestDto.getMaritalStatus()!=null && !requestDto.getMaritalStatus().toString().isEmpty()) {
+
+			if (requestDto.getMaritalStatus() != null && !requestDto.getMaritalStatus().toString().isEmpty()) {
 				existingProposer.setMaritalStatus(requestDto.getMaritalStatus());
 			}
-			
-			if(requestDto.getProposerEmail()!=null && !requestDto.getProposerEmail().isEmpty()) {
+
+			if (requestDto.getProposerEmail() != null && !requestDto.getProposerEmail().isEmpty()) {
 				existingProposer.setProposerEmail(requestDto.getProposerEmail());
 			}
-			
-			if(requestDto.getProposerMobileNo()!=null && !requestDto.getProposerMobileNo().toString().isEmpty()) {
+
+			if (requestDto.getProposerMobileNo() != null && !requestDto.getProposerMobileNo().toString().isEmpty()) {
 				existingProposer.setProposerMobileNo(requestDto.getProposerMobileNo());
 			}
-			
-			if(requestDto.getAlterMobileNo()!=null && !requestDto.getAlterMobileNo().toString().isEmpty()) {
+
+			if (requestDto.getAlterMobileNo() != null && !requestDto.getAlterMobileNo().toString().isEmpty()) {
 				existingProposer.setAlterMobileNo(requestDto.getAlterMobileNo());
 			}
-			
-			if(requestDto.getAddressLine1()!=null && !requestDto.getAddressLine1().isEmpty()) {
+
+			if (requestDto.getAddressLine1() != null && !requestDto.getAddressLine1().isEmpty()) {
 				existingProposer.setAddressLine1(requestDto.getAddressLine1());
 			}
-			
-			if(requestDto.getAddressLine2()!=null && !requestDto.getAddressLine2().isEmpty()) {
+
+			if (requestDto.getAddressLine2() != null && !requestDto.getAddressLine2().isEmpty()) {
 				existingProposer.setAddressLine2(requestDto.getAddressLine2());
 			}
-			
-			if(requestDto.getAddressLine3()!=null && !requestDto.getAddressLine3().isEmpty()) {
+
+			if (requestDto.getAddressLine3() != null && !requestDto.getAddressLine3().isEmpty()) {
 				existingProposer.setAddressLine3(requestDto.getAddressLine3());
 			}
-			
-			if(requestDto.getPincode()!=null && !requestDto.getPincode().toString().isEmpty()) {
+
+			if (requestDto.getPincode() != null && !requestDto.getPincode().toString().isEmpty()) {
 				existingProposer.setPincode(requestDto.getPincode());
 			}
-			
-			if(requestDto.getCity()!=null && !requestDto.getCity().isEmpty()) {
+
+			if (requestDto.getCity() != null && !requestDto.getCity().isEmpty()) {
 				existingProposer.setCity(requestDto.getCity());
 			}
-			
-			if(requestDto.getState()!=null && !requestDto.getState().isEmpty()) {
+
+			if (requestDto.getState() != null && !requestDto.getState().isEmpty()) {
 				existingProposer.setState(requestDto.getState());
 			}
-			
 
 			ProposerDetailsEntity detailsEntity = proposerDetailsRepository.save(existingProposer);
-			
-			NomineeDto dto = requestDto.getNomineeDetailsEntities(); 
-			Optional<NomineeDetailsEntity> optional = nomineeRepository.findByProposerIdAndNomieeStatus(detailsEntity.getProposerId(),"Yes");
+
+			NomineeDto dto = requestDto.getNomineeDetailsEntities();
+			Optional<NomineeDetailsEntity> optional = nomineeRepository
+					.findByProposerIdAndNomieeStatus(detailsEntity.getProposerId(), "Yes");
 			NomineeDetailsEntity existingNominee = optional.get();
-			
-			if(requestDto.getIsUpdate().equalsIgnoreCase("Yes")) {
-				
+
+			if (requestDto.getIsUpdate().equalsIgnoreCase("Yes")) {
+
 				existingNominee.setProposerId(detailsEntity.getProposerId());
 				existingNominee.setAddress(dto.getAddress());
 				existingNominee.setDateOfBirth(dto.getDateOfBirth());
@@ -486,14 +480,14 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				existingNominee.setMobileNo(dto.getMobileNo());
 				existingNominee.setNomineeName(dto.getNomineeName());
 				existingNominee.setRelationWithProposer(dto.getRelationWithProposer());
-				
+
 				nomineeRepository.save(existingNominee);
-			}else {
-				
+			} else {
+
 				existingNominee.setNomieeStatus("No");
-				
+
 				nomineeRepository.save(existingNominee);
-				
+
 				NomineeDetailsEntity nomineeDetailsEntity = new NomineeDetailsEntity();
 				nomineeDetailsEntity.setAddress(dto.getAddress());
 				nomineeDetailsEntity.setProposerId(detailsEntity.getProposerId());
@@ -502,7 +496,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				nomineeDetailsEntity.setMobileNo(dto.getMobileNo());
 				nomineeDetailsEntity.setNomineeName(dto.getNomineeName());
 				nomineeDetailsEntity.setRelationWithProposer(dto.getRelationWithProposer());
-				
+
 				nomineeRepository.save(nomineeDetailsEntity);
 			}
 
@@ -522,7 +516,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //					entity.setNomineeName(dto1.getNomineeName());
 //					entity.setRelationWithProposer(dto1.getRelationWithProposer());
 //				}
-				
+
 //				Optional<List<NomineeDetailsEntity>> optional = nomineeRepository.findAllByProposerId(detailsEntity.getProposerId());
 //				List<NomineeDetailsEntity> existingNominee = optional.get();	
 //				
@@ -546,7 +540,6 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //					nomineeDetailsEntities.add(existingNominee.get(i));
 //				}
 
-
 //				entity.setProposerId(detailsEntity.getProposerId());
 //				entity.setAddress(dto.getAddress());
 //				entity.setDateOfBirth(dto.getDateOfBirth());
@@ -555,10 +548,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //				entity.setNomineeName(dto.getNomineeName());
 //				entity.setRelationWithProposer(dto.getRelationWithProposer());
 
-				//nomineeDetailsEntities.add(entity);
-			
+			// nomineeDetailsEntities.add(entity);
 
-			//nomineeRepository.saveAll(nomineeDetailsEntities);
+			// nomineeRepository.saveAll(nomineeDetailsEntities);
 
 			return "updated successfully";
 		}
@@ -567,26 +559,24 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 	@Override
 	public String delete(Integer id) {
-		
+
 		Optional<ProposerDetailsEntity> opt = proposerDetailsRepository.findById(id);
 
 		if (opt.isPresent()) {
 			ProposerDetailsEntity existingProposer = opt.get();
 			existingProposer.setStatus("No");
-			
-			
-			ProposerDetailsEntity detailsEntity= proposerDetailsRepository.save(existingProposer);
-			
-			Optional<List<NomineeDetailsEntity>> optional = nomineeRepository.findAllByProposerId(detailsEntity.getProposerId());
+
+			ProposerDetailsEntity detailsEntity = proposerDetailsRepository.save(existingProposer);
+
+			Optional<List<NomineeDetailsEntity>> optional = nomineeRepository
+					.findAllByProposerId(detailsEntity.getProposerId());
 			List<NomineeDetailsEntity> existingNominee = optional.get();
-			
-			for(int i=0 ;i<existingNominee.size();i++) {
+
+			for (int i = 0; i < existingNominee.size(); i++) {
 				existingNominee.get(i).setNomieeStatus("No");
-				}
-			
+			}
+
 			nomineeRepository.saveAll(existingNominee);
-			
-			
 
 			return "deleted successfull";
 		}
@@ -602,26 +592,26 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 	@Override
 	public RequiredDto fetchProposerById(Integer id) {
-		
-		Optional<ProposerDetailsEntity> optional = proposerDetailsRepository.findByProposerIdAndStatus(id, "Yes");
+
+		Optional<ProposerDetailsEntity> optional = proposerDetailsRepository.findById(id, "Yes");
 		RequiredDto dto = new RequiredDto();
-		
-		if(optional.isPresent()) {
-			
+
+		if (optional.isPresent()) {
+
 			ProposerDetailsEntity detailsEntity = optional.get();
-			
+
 			dto.setTitle(detailsEntity.getTitle());
-			//dto.setProposerFullName(detailsEntity.getProposerFullName());
+			// dto.setProposerFullName(detailsEntity.getProposerFullName());
 			dto.setProposerGender(detailsEntity.getProposerGender());
-			
+
 			StringBuilder builder = new StringBuilder();
 			builder.append(detailsEntity.getProposerFirstName());
-			
-			if(detailsEntity.getProposerMiddleName()!=null) {
-				builder.append(" "+detailsEntity.getProposerMiddleName());
+
+			if (detailsEntity.getProposerMiddleName() != null) {
+				builder.append(" " + detailsEntity.getProposerMiddleName());
 			}
-			
-			builder.append(" "+detailsEntity.getProposerLastName());
+
+			builder.append(" " + detailsEntity.getProposerLastName());
 			dto.setProposerFullName(builder.toString());
 			dto.setDateOfBirth(detailsEntity.getDateOfBirth());
 			dto.setPanNumber(detailsEntity.getPanNumber());
@@ -637,13 +627,13 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 			dto.setCity(detailsEntity.getCity());
 			dto.setState(detailsEntity.getState());
 			dto.setStatus(detailsEntity.getStatus());
-			
+
 			Integer proposerId = detailsEntity.getProposerId();
-			
-			Optional<NomineeDetailsEntity> opt = nomineeRepository.findByProposerIdAndNomieeStatus(proposerId,"Yes");
+
+			Optional<NomineeDetailsEntity> opt = nomineeRepository.findByProposerIdAndNomieeStatus(proposerId, "Yes");
 			NomineeDetailsEntity nomineeDetailsEntity = opt.get();
-			
-	        NomineeDto nomineeDto = new NomineeDto();
+
+			NomineeDto nomineeDto = new NomineeDto();
 			nomineeDto.setProposerId(proposerId);
 			nomineeDto.setAddress(nomineeDetailsEntity.getAddress());
 			nomineeDto.setDateOfBirth(nomineeDetailsEntity.getDateOfBirth());
@@ -651,10 +641,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 			nomineeDto.setMobileNo(nomineeDetailsEntity.getMobileNo());
 			nomineeDto.setNomineeName(nomineeDetailsEntity.getNomineeName());
 			nomineeDto.setRelationWithProposer(nomineeDetailsEntity.getRelationWithProposer());
-			
+
 			dto.setNomineeDetailsEntity(nomineeDto);
-			
-			
+
 //			List<NomineeDetailsEntity> detailsEntities = nomineeRepository.getAllByProposerId(proposerId);
 //			List<NomineeDto> nomineeDtos = new ArrayList<>();
 //			
@@ -673,34 +662,42 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //			}
 //			
 //			dto.setNomineeDetailsEntities(nomineeDtos);
-			
-			
+
 		}
 		return dto;
 	}
 
 	@Override
 	public Integer fetchTotalRecord() {
-		
+
 		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
-		
+
 		return list.size();
 	}
 
 	@Override
 	public List<ProposerDetailsEntity> fetchAllByStringBuilder(ProposerPagination pagination) {
-		
+
 		StringBuilder builder = new StringBuilder("select p from ProposerDetailsEntity p where p.status = 'Yes'");
 
 		String sortBy = pagination.getSortBy();
 
-		if (sortBy == null || sortBy.isEmpty()) {
-			sortBy = "proposerId";
-		}
+		sortBy = (sortBy == null || sortBy.isEmpty()) ? "proposerId" : sortBy;
+
+//		if (sortBy == null || sortBy.isEmpty()) {
+//			sortBy = "proposerId";
+//		}
 
 		String sortOrder = pagination.getSortOrder();
-		if (sortOrder == null || sortOrder.isEmpty()) {
-			sortOrder = "desc";
+
+		sortOrder = (sortOrder == null || sortOrder.isEmpty()) ? "desc" : sortOrder;
+
+//		if (sortOrder == null || sortOrder.isEmpty()) {
+//			sortOrder = "desc";
+//		}
+
+		if (pagination.getSearching() == null) {
+			pagination.setSearching(new Searching());
 		}
 
 		Searching searching = pagination.getSearching();
@@ -727,7 +724,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 			Long mobileNo = searching.getProposerMobileNo();
 
-			if (mobileNo != null && !mobileNo.toString().isEmpty() && mobileNo !=0) {
+			if (mobileNo != null && !mobileNo.toString().isEmpty() && mobileNo != 0) {
 				builder.append(" and p.proposerMobileNo= ").append(mobileNo);
 			}
 
@@ -756,6 +753,39 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		return query.getResultList();
 	}
 
-	
+	@Override
+	public void getDataInExcel(HttpServletResponse response) throws IOException {
+
+		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
+
+		HSSFWorkbook workbook = new HSSFWorkbook();
+		HSSFSheet sheet = workbook.createSheet("Proposer Details");
+		HSSFRow row = sheet.createRow(0);
+
+		row.createCell(0).setCellValue("ProposerId");
+		row.createCell(1).setCellValue("Title");
+		row.createCell(2).setCellValue("FirstName");
+		row.createCell(3).setCellValue("MiddleName");
+		row.createCell(4).setCellValue("LastName");
+
+		int dataRowIndex = 1;
+
+		for (ProposerDetailsEntity detailsEntity : list) {
+
+			HSSFRow dataRow = sheet.createRow(dataRowIndex);
+			dataRow.createCell(0).setCellValue(detailsEntity.getProposerId());
+			dataRow.createCell(1).setCellValue(detailsEntity.getTitle().toString());
+			dataRow.createCell(2).setCellValue(detailsEntity.getProposerFirstName());
+			dataRow.createCell(3).setCellValue(detailsEntity.getProposerMiddleName());
+			dataRow.createCell(4).setCellValue(detailsEntity.getProposerLastName());
+
+			dataRowIndex++;
+		}
+
+		ServletOutputStream out = response.getOutputStream();
+		workbook.write(out);
+		workbook.close();
+		out.close();
+	}
 
 }

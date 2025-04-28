@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +26,8 @@ import com.example.demo.request.RequestDto;
 import com.example.demo.request.RequiredDto;
 import com.example.demo.response.ResponseHandler;
 import com.example.demo.service.ProposerDetailsService;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -218,6 +221,15 @@ public class ProposerDetailsController {
 		}
 		
 		return response;
+	}
+	
+	@GetMapping("/excel")
+	public void generatedExcel(HttpServletResponse response) throws IOException {
+		
+		response.setContentType("application/octet-stream");
+		response.setHeader("Content-Disposition", "attachment;filename=proposer.xls");
+		
+		service.getDataInExcel(response);
 	}
 
 }

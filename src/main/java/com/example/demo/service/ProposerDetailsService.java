@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import java.io.IOException;
+import java.net.http.HttpResponse;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +11,8 @@ import com.example.demo.entity.ProposerDetailsEntity;
 import com.example.demo.pagination.ProposerPagination;
 import com.example.demo.request.RequestDto;
 import com.example.demo.request.RequiredDto;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface ProposerDetailsService {
 	
@@ -27,6 +31,8 @@ public interface ProposerDetailsService {
 	public Integer fetchTotalRecord();
 	
 	public List<ProposerDetailsEntity> fetchAllByStringBuilder(ProposerPagination pagination);
+	
+	public void getDataInExcel(HttpServletResponse response) throws IOException  ;
 	
 
 }
