@@ -8,6 +8,9 @@ import java.util.Optional;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -758,9 +761,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
 
-		HSSFWorkbook workbook = new HSSFWorkbook();
-		HSSFSheet sheet = workbook.createSheet("Proposer Details");
-		HSSFRow row = sheet.createRow(0);
+		XSSFWorkbook workbook = new XSSFWorkbook();
+		XSSFSheet sheet = workbook.createSheet("Proposer Details");
+		XSSFRow row = sheet.createRow(0);
 
 		row.createCell(0).setCellValue("ProposerId");
 		row.createCell(1).setCellValue("Title");
@@ -772,7 +775,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 		for (ProposerDetailsEntity detailsEntity : list) {
 
-			HSSFRow dataRow = sheet.createRow(dataRowIndex);
+			XSSFRow dataRow = sheet.createRow(dataRowIndex);
 			dataRow.createCell(0).setCellValue(detailsEntity.getProposerId());
 			dataRow.createCell(1).setCellValue(detailsEntity.getTitle().toString());
 			dataRow.createCell(2).setCellValue(detailsEntity.getProposerFirstName());

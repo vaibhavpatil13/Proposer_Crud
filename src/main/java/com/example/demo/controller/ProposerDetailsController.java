@@ -227,7 +227,7 @@ public class ProposerDetailsController {
 	public void generatedExcel(HttpServletResponse response) throws IOException {
 		
 		response.setContentType("application/octet-stream");
-		response.setHeader("Content-Disposition", "attachment;filename=proposer.xls");
+		response.setHeader("Content-Disposition", "attachment;filename=proposer.xlsx");
 		
 		service.getDataInExcel(response);
 	}
