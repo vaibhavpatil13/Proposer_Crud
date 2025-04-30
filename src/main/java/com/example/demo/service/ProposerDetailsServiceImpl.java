@@ -1,26 +1,33 @@
 package com.example.demo.service;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.entity.ErrorDetails;
 import com.example.demo.entity.NomineeDetailsEntity;
 import com.example.demo.entity.ProposerDetailsEntity;
+import com.example.demo.enums.Gender;
+import com.example.demo.enums.Marital_Status;
+import com.example.demo.enums.Title;
 import com.example.demo.pagination.ProposerPagination;
 import com.example.demo.pagination.Searching;
+import com.example.demo.repository.ErrorDetailsRepository;
 import com.example.demo.repository.NomineeRepository;
 import com.example.demo.repository.ProposerDetailsRepository;
 import com.example.demo.request.NomineeDto;
@@ -34,14 +41,15 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
 
 @Service
 public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 	@Autowired
 	private ProposerDetailsRepository proposerDetailsRepository;
+	
+	@Autowired
+	private ErrorDetailsRepository errorDetailsRepository;
 
 	@Autowired
 	private Validations validations;
@@ -757,7 +765,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	}
 
 	@Override
-	public void getDataInExcel(HttpServletResponse response) throws IOException {
+	public String getDataInExcel() throws IOException {
 
 		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
 
@@ -765,30 +773,227 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		XSSFSheet sheet = workbook.createSheet("Proposer Details");
 		XSSFRow row = sheet.createRow(0);
 
-		row.createCell(0).setCellValue("ProposerId");
-		row.createCell(1).setCellValue("Title");
-		row.createCell(2).setCellValue("FirstName");
-		row.createCell(3).setCellValue("MiddleName");
-		row.createCell(4).setCellValue("LastName");
+		row.createCell(0).setCellValue("Title");
+		row.createCell(1).setCellValue("FirstName");
+		row.createCell(2).setCellValue("MiddleName");
+		row.createCell(3).setCellValue("LastName");
+		row.createCell(4).setCellValue("ProposerGender");
+		row.createCell(5).setCellValue("DateOfBirth");
+		row.createCell(6).setCellValue("PanNumber");
+		row.createCell(7).setCellValue("AadharNo");
+		row.createCell(8).setCellValue("MaritalStatus");
+		row.createCell(9).setCellValue("ProposerEmail");
+		row.createCell(10).setCellValue("ProposerMobileNo");
+		row.createCell(11).setCellValue("AlterMobileNo");
+		row.createCell(12).setCellValue("AddressLine1");
+		row.createCell(13).setCellValue("AddressLine2");
+		row.createCell(14).setCellValue("AddressLine3");
+		row.createCell(15).setCellValue("Pincode");
+		row.createCell(16).setCellValue("City");
+		row.createCell(17).setCellValue("State");
 
-		int dataRowIndex = 1;
+//		int dataRowIndex = 1;
+//
+//		for (ProposerDetailsEntity detailsEntity : list) {
+//
+//			XSSFRow dataRow = sheet.createRow(dataRowIndex);
+//			dataRow.createCell(0).setCellValue(detailsEntity.getProposerId());
+//			dataRow.createCell(1).setCellValue(detailsEntity.getTitle().toString());
+//			dataRow.createCell(2).setCellValue(detailsEntity.getProposerFirstName());
+//			dataRow.createCell(3).setCellValue(detailsEntity.getProposerMiddleName());
+//			dataRow.createCell(4).setCellValue(detailsEntity.getProposerLastName());
+//			dataRow.createCell(5).setCellValue(detailsEntity.getProposerGender().toString());
+//			dataRow.createCell(6).setCellValue(detailsEntity.getDateOfBirth().toString());
+//			dataRow.createCell(7).setCellValue(detailsEntity.getPanNumber());
+//			dataRow.createCell(8).setCellValue(detailsEntity.getAadharNo().toString());
+//			dataRow.createCell(9).setCellValue(detailsEntity.getMaritalStatus().toString());
+//			dataRow.createCell(10).setCellValue(detailsEntity.getCreatedAt().toString());
+//			dataRow.createCell(11).setCellValue(detailsEntity.getUpdatedAt().toString());
+//			dataRow.createCell(12).setCellValue(detailsEntity.getProposerEmail());
+//			dataRow.createCell(13).setCellValue(detailsEntity.getProposerMobileNo().toString());
+//			dataRow.createCell(14).setCellValue(detailsEntity.getAlterMobileNo().toString());
+//			dataRow.createCell(15).setCellValue(detailsEntity.getAddressLine1());
+//			dataRow.createCell(16).setCellValue(detailsEntity.getAddressLine2());
+//			dataRow.createCell(17).setCellValue(detailsEntity.getAddressLine3());
+//			dataRow.createCell(18).setCellValue(detailsEntity.getPincode().toString());
+//			dataRow.createCell(19).setCellValue(detailsEntity.getCity());
+//			dataRow.createCell(20).setCellValue(detailsEntity.getState());
+//
+//			dataRowIndex++;
+//		}
+		String uid = UUID.randomUUID().toString().substring(0, 3);
+		String fileName = "Proposer" + uid + ".xlsx";
+		String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
 
-		for (ProposerDetailsEntity detailsEntity : list) {
+		try (FileOutputStream out = new FileOutputStream(filePath)) {
+			workbook.write(out);
+		}
+		workbook.close();
 
-			XSSFRow dataRow = sheet.createRow(dataRowIndex);
-			dataRow.createCell(0).setCellValue(detailsEntity.getProposerId());
-			dataRow.createCell(1).setCellValue(detailsEntity.getTitle().toString());
-			dataRow.createCell(2).setCellValue(detailsEntity.getProposerFirstName());
-			dataRow.createCell(3).setCellValue(detailsEntity.getProposerMiddleName());
-			dataRow.createCell(4).setCellValue(detailsEntity.getProposerLastName());
+		return filePath;
+	}
 
-			dataRowIndex++;
+	@Override
+	public String importExcel(MultipartFile file) throws IOException {
+
+		Workbook workbook = new XSSFWorkbook(file.getInputStream());
+
+		Sheet sheet = workbook.getSheetAt(0);
+
+		List<String> errors = new ArrayList<>();
+
+		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+			Row row = sheet.getRow(i);
+
+			if (row == null) {
+				continue;
+			}
+
+			List<String> errorFields = new ArrayList<>();
+			List<String> fields = new ArrayList<>();
+
+			Cell firstName = row.getCell(1);
+			if (firstName == null || firstName.getStringCellValue() == null || firstName.getStringCellValue().isEmpty()) {
+				errorFields.add("First Name of " + row.getRowNum() + " row is missing");
+				fields.add("First Name");
+			}
+
+			Cell middleName = row.getCell(2);
+			if (middleName == null || middleName.getStringCellValue() == null || middleName.getStringCellValue().isEmpty()) {
+				errorFields.add("Middle Name of " + row.getRowNum() + " row is missing");
+				fields.add("Middle Name");
+			}
+
+			Cell lastName = row.getCell(3);
+			if (lastName == null || lastName.getStringCellValue() == null || lastName.getStringCellValue().isEmpty()) {
+				errorFields.add("Last Name of " + row.getRowNum() + " row is missing");
+				fields.add("Last Name");
+			}
+
+			Cell gender = row.getCell(4);
+			if (gender == null || gender.getStringCellValue() == null || gender.getStringCellValue().isEmpty()) {
+				errorFields.add("Gender of " + row.getRowNum() + " row is missing");
+				fields.add("Gender");
+			}
+
+			Cell dob = row.getCell(5);
+			if (dob == null || dob.getDateCellValue() == null) {
+				errorFields.add("Date of Birth of " + row.getRowNum() + " row is missing");
+				fields.add("Date of Birth");
+			}
+
+			Cell panNumber = row.getCell(6);
+			if (panNumber == null || panNumber.getStringCellValue() == null || panNumber.getStringCellValue().isEmpty()) {
+				errorFields.add("Pan Number of " + row.getRowNum() + " row is missing");
+				fields.add("Pan Number");
+			}
+
+			Cell aadharNumber = row.getCell(7);
+			if (aadharNumber == null || aadharNumber.getNumericCellValue() == 0) {
+				errorFields.add("Aadhar Number of " + row.getRowNum() + " row is missing");
+				fields.add("Aadhar Number");
+			}
+
+			Cell maritalStatus = row.getCell(8);
+			if (maritalStatus == null || maritalStatus.getStringCellValue() == null || maritalStatus.getStringCellValue().isEmpty()) {
+				errorFields.add("Marital Status of " + row.getRowNum() + " row is missing");
+				fields.add("Marital Status");
+			}
+
+			Cell emailId = row.getCell(9);
+			if (emailId == null || emailId.getStringCellValue() == null || emailId.getStringCellValue().isEmpty()) {
+				errorFields.add("Email Id of " + row.getRowNum() + " row is missing");
+				fields.add("Email Id");
+			}
+
+			Cell mobileNumber = row.getCell(10);
+			if (mobileNumber == null || mobileNumber.getNumericCellValue() == 0) {
+				errorFields.add("Mobile Number of " + row.getRowNum() + " row is missing");
+				fields.add("Mobile Number");
+			}
+
+			Cell address = row.getCell(12);
+			if (address == null || address.getStringCellValue() == null || address.getStringCellValue().isEmpty()) {
+				errorFields.add("Address of " + row.getRowNum() + " row is missing");
+				fields.add("Address");
+			}
+
+			Cell pincode = row.getCell(15);
+			if (pincode == null || pincode.getNumericCellValue() == 0) {
+				errorFields.add("Pincode of " + row.getRowNum() + " row is missing");
+				fields.add("Pincode");
+			}
+
+			Cell city = row.getCell(16);
+			if (city == null || city.getStringCellValue() == null || city.getStringCellValue().isEmpty()) {
+				errorFields.add("City of " + row.getRowNum() + " row is missing");
+				fields.add("City");
+			}
+
+			Cell state = row.getCell(17);
+			if (state == null || state.getStringCellValue() == null || state.getStringCellValue().isEmpty()) {
+				errorFields.add("State of " + row.getRowNum() + " row is missing");
+				fields.add("State");
+			}
+
+			if (errorFields != null && !errorFields.isEmpty()) {
+
+				errors.addAll(errorFields);
+
+				ErrorDetails errorDetails = new ErrorDetails();
+				errorDetails.setError(String.join(", ", errors));
+				errorDetails.setErrorField(String.join(", ", fields));
+				errorDetails.setStatus("Fail");
+
+				errorDetailsRepository.save(errorDetails);
+
+			} else {
+				ProposerDetailsEntity entity = new ProposerDetailsEntity();
+
+				entity.setTitle(Title.valueOf(row.getCell(0).getStringCellValue()));
+				entity.setProposerFirstName(firstName.getStringCellValue());
+				entity.setProposerMiddleName(middleName.getStringCellValue());
+				entity.setProposerLastName(lastName.getStringCellValue());
+				entity.setProposerGender(Gender.valueOf(gender.getStringCellValue()));
+				Date utilDate = dob.getDateCellValue(); // java.util.Date
+				if (utilDate != null) {
+					java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
+					entity.setDateOfBirth(sqlDate);
+				}
+				entity.setPanNumber(panNumber.getStringCellValue());
+				entity.setAadharNo((long) aadharNumber.getNumericCellValue());
+				entity.setMaritalStatus(Marital_Status.valueOf(maritalStatus.getStringCellValue()));
+				entity.setProposerEmail(emailId.getStringCellValue());
+				entity.setProposerMobileNo((long) mobileNumber.getNumericCellValue());
+				entity.setAlterMobileNo((long) row.getCell(11).getNumericCellValue());
+				entity.setAddressLine1(address.getStringCellValue());
+				entity.setAddressLine2(row.getCell(13).getStringCellValue());
+				entity.setAddressLine3(row.getCell(14).getStringCellValue());
+				entity.setPincode((long) pincode.getNumericCellValue());
+				entity.setCity(city.getStringCellValue());
+				entity.setState(state.getStringCellValue());
+
+				ProposerDetailsEntity save = proposerDetailsRepository.save(entity);
+
+				ErrorDetails errorDetails = new ErrorDetails();
+				errorDetails.setError(save.getProposerId().toString());
+				errorDetails.setErrorField(null);
+				errorDetails.setStatus("Success");
+
+				errorDetailsRepository.save(errorDetails);
+
+			}
+
 		}
 
-		ServletOutputStream out = response.getOutputStream();
-		workbook.write(out);
 		workbook.close();
-		out.close();
+
+		if (!errors.isEmpty()) {
+			return String.join(", ", errors);
+		}
+
+		return "All Proposers Saved";
 	}
 
 }

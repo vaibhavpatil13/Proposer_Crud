@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.entity.ProposerDetailsEntity;
 import com.example.demo.pagination.ProposerPagination;
@@ -223,13 +225,61 @@ public class ProposerDetailsController {
 		return response;
 	}
 	
-	@GetMapping("/excel")
-	public void generatedExcel(HttpServletResponse response) throws IOException {
-		
-		response.setContentType("application/octet-stream");
-		response.setHeader("Content-Disposition", "attachment;filename=proposer.xlsx");
-		
-		service.getDataInExcel(response);
+	@GetMapping("/export")
+	public ResponseHandler generatedExcel() throws IOException {
+
+		// response.setContentType("application/octet-stream");
+//		response.setHeader("Content-Disposition", "attachment;filename=proposer.xlsx");
+
+		ResponseHandler handler = new ResponseHandler();
+
+		try {
+
+			String fileUrl = service.getDataInExcel();
+
+			handler.setData(fileUrl);
+			handler.setStatus(true);
+			handler.setMessage("Success");
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			handler.setData(new ArrayList<>());
+			handler.setStatus(false);
+			handler.setMessage(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+			handler.setData(new ArrayList<>());
+			handler.setStatus(false);
+			handler.setMessage("failed");
+		}
+
+		return handler;
+	}
+
+	@PostMapping(value = "/importExcel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseHandler importExcel(@RequestParam MultipartFile file) {
+
+		ResponseHandler handler = new ResponseHandler();
+
+		try {
+
+			String message = service.importExcel(file);
+
+			handler.setData(message);
+			handler.setStatus(true);
+			handler.setMessage("Success");
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			handler.setData(new ArrayList<>());
+			handler.setStatus(false);
+			handler.setMessage(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+			handler.setData(new ArrayList<>());
+			handler.setStatus(false);
+			handler.setMessage("failed");
+		}
+
+		return handler;
 	}
 
 }

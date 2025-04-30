@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.entity.ProposerDetailsEntity;
 import com.example.demo.pagination.ProposerPagination;
@@ -32,7 +33,9 @@ public interface ProposerDetailsService {
 	
 	public List<ProposerDetailsEntity> fetchAllByStringBuilder(ProposerPagination pagination);
 	
-	public void getDataInExcel(HttpServletResponse response) throws IOException  ;
+	public String getDataInExcel() throws IOException  ;
+	
+	public String importExcel(MultipartFile file) throws IOException; 
 	
 
 }
