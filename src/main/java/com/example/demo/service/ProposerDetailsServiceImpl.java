@@ -924,6 +924,11 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				errorFields.add("Pincode of " + row.getRowNum() + " row is missing");
 				fields.add("Pincode");
 			}
+			
+			if(pincode.toString().length()!=6) {
+				errorFields.add("Pincode of " + row.getRowNum() + " row is not valid");
+				fields.add("Pincode");
+			}
 
 			Cell city = row.getCell(16);
 			if (city == null || city.getStringCellValue() == null || city.getStringCellValue().isEmpty()) {
