@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.List;
@@ -36,6 +37,10 @@ public interface ProposerDetailsService {
 	public String getDataInExcel() throws IOException  ;
 	
 	public String importExcel(MultipartFile file) throws IOException; 
+	
+	public String queueExcel(MultipartFile file) throws IOException;
+	
+	public void batchProcessing() throws FileNotFoundException;
 	
 
 }

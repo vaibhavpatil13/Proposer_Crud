@@ -32,13 +32,13 @@ import com.example.demo.service.ProposerDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/proposer")
 public class ProposerDetailsController {
 	
 	@Autowired
 	private ProposerDetailsService service;
 	
-	@PostMapping("/addProposer")
+	@PostMapping("/add")
 	public ResponseHandler createProposer(@RequestBody RequestDto requestDto){
 		
 		ResponseHandler response = new ResponseHandler();
@@ -68,7 +68,7 @@ public class ProposerDetailsController {
 		return response;
 	}
 	
-	@PostMapping("/allProposals")
+	@PostMapping("/listing")
 	public ResponseHandler allProposals(@RequestBody ProposerPagination proposerPagination){
 		
 		ResponseHandler response = new ResponseHandler();
@@ -108,7 +108,7 @@ public class ProposerDetailsController {
 		return response;		
 	}
 	
-	@PutMapping("/updateProposer/{id}")
+	@PutMapping("/update/{id}")
 	public ResponseHandler update(@PathVariable Integer id, @RequestBody RequestDto requestDto){
 		
 		ResponseHandler response = new ResponseHandler();
@@ -168,7 +168,7 @@ public class ProposerDetailsController {
 		
 	}
 	
-	@GetMapping("/getAllActive")
+	@GetMapping("/list")
 	public ResponseHandler getAllActive(){
 		
 		ResponseHandler handler = new ResponseHandler();
@@ -197,7 +197,7 @@ public class ProposerDetailsController {
 		return handler;
 	}
 	
-	@GetMapping("/getById/{id}")
+	@GetMapping("/get-by-id/{id}")
 	public ResponseHandler getProposerById(@PathVariable Integer id) {
 		
 		ResponseHandler response = new ResponseHandler();
@@ -255,14 +255,14 @@ public class ProposerDetailsController {
 		return handler;
 	}
 
-	@PostMapping(value = "/importExcel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseHandler importExcel(@RequestParam MultipartFile file) {
 
 		ResponseHandler handler = new ResponseHandler();
 
 		try {
 
-			String message = service.importExcel(file);
+			String message = service.queueExcel(file);
 
 			handler.setData(message);
 			handler.setStatus(true);

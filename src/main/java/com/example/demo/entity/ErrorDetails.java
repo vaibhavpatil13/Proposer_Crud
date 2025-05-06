@@ -21,6 +21,8 @@ public class ErrorDetails {
 	private String error;
 	@Column(name = "error_field")
 	private String errorField;
+	@Column(name = "row_index")
+	private Integer rowIndex;
 	
 	public ErrorDetails() {
 		// TODO Auto-generated constructor stub
@@ -58,13 +60,24 @@ public class ErrorDetails {
 		this.errorField = errorField;
 	}
 
-	public ErrorDetails(Integer errorId, String status, String error, String errorField) {
+	public Integer getRowIndex() {
+		return rowIndex;
+	}
+
+	public void setRowIndex(Integer rowIndex) {
+		this.rowIndex = rowIndex;
+	}
+
+	public ErrorDetails(Integer errorId, String status, String error, String errorField, Integer rowIndex) {
 		super();
 		this.errorId = errorId;
 		this.status = status;
 		this.error = error;
 		this.errorField = errorField;
+		this.rowIndex = rowIndex;
 	}
+
+	
 	
 	
 

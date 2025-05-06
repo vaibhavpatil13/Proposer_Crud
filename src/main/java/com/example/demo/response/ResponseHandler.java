@@ -28,8 +28,8 @@ public class ResponseHandler {
 	public Integer getTotlaRecord() {
 		return totalRecord;
 	}
-	public void setTotlaRecord(Integer totlaRecord) {
-		this.totalRecord = totlaRecord;
+	public void setTotlaRecord(Integer totalRecord) {
+		this.totalRecord = totalRecord;
 	}
 
 	

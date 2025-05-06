@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -16,9 +19,11 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.entity.BatchQueue;
 import com.example.demo.entity.ErrorDetails;
 import com.example.demo.entity.NomineeDetailsEntity;
 import com.example.demo.entity.ProposerDetailsEntity;
@@ -27,6 +32,7 @@ import com.example.demo.enums.Marital_Status;
 import com.example.demo.enums.Title;
 import com.example.demo.pagination.ProposerPagination;
 import com.example.demo.pagination.Searching;
+import com.example.demo.repository.BatchQueueRepository;
 import com.example.demo.repository.ErrorDetailsRepository;
 import com.example.demo.repository.NomineeRepository;
 import com.example.demo.repository.ProposerDetailsRepository;
@@ -50,6 +56,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	
 	@Autowired
 	private ErrorDetailsRepository errorDetailsRepository;
+	
+	@Autowired
+	private BatchQueueRepository batchQueueRepository;
 
 	@Autowired
 	private Validations validations;
@@ -767,7 +776,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	@Override
 	public String getDataInExcel() throws IOException {
 
-		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
+//		List<ProposerDetailsEntity> list = proposerDetailsRepository.getAllActiveStatus("Yes");
 
 		XSSFWorkbook workbook = new XSSFWorkbook();
 		XSSFSheet sheet = workbook.createSheet("Proposer Details");
@@ -840,7 +849,25 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 		Sheet sheet = workbook.getSheetAt(0);
 
+		Row headRow = sheet.getRow(0);
+
+		int lastCol = headRow.getLastCellNum();
+
+		headRow.createCell(lastCol).setCellValue("Error Message");
+
+		headRow.createCell(lastCol + 1).setCellValue("Error Status");
+
+//		XSSFWorkbook exportWorkbook = new XSSFWorkbook();
+//		XSSFSheet exportSheet = exportWorkbook.createSheet("Response Error ");
+//		XSSFRow exportRow = exportSheet.createRow(0);
+//
+//		exportRow.createCell(0).setCellValue("ErrorMessage");
+//		exportRow.createCell(1).setCellValue("ErrorField");
+//		exportRow.createCell(2).setCellValue("Status");
+//		exportRow.createCell(3).setCellValue("RowIndex");
+
 		List<String> errors = new ArrayList<>();
+		int dataRowIndex = 1;
 
 		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 
@@ -854,91 +881,104 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 			List<String> fields = new ArrayList<>();
 
 			Cell firstName = row.getCell(1);
-			if (firstName == null || firstName.getStringCellValue() == null || firstName.getStringCellValue().isEmpty()) {
-				errorFields.add("First Name of " + row.getRowNum() + " row is missing");
+			if (firstName == null || firstName.getStringCellValue().isEmpty()) {
+				errorFields.add("First Name is missing");
 				fields.add("First Name");
+
 			}
 
 			Cell middleName = row.getCell(2);
-			if (middleName == null || middleName.getStringCellValue() == null || middleName.getStringCellValue().isEmpty()) {
-				errorFields.add("Middle Name of " + row.getRowNum() + " row is missing");
+			if (middleName == null || middleName.getStringCellValue().isEmpty()) {
+				errorFields.add("Middle Name is missing");
 				fields.add("Middle Name");
 			}
 
 			Cell lastName = row.getCell(3);
-			if (lastName == null || lastName.getStringCellValue() == null || lastName.getStringCellValue().isEmpty()) {
-				errorFields.add("Last Name of " + row.getRowNum() + " row is missing");
+			if (lastName == null || lastName.getStringCellValue().isEmpty()) {
+				errorFields.add("Last Name is missing");
 				fields.add("Last Name");
 			}
 
 			Cell gender = row.getCell(4);
-			if (gender == null || gender.getStringCellValue() == null || gender.getStringCellValue().isEmpty()) {
-				errorFields.add("Gender of " + row.getRowNum() + " row is missing");
+			if (gender == null || gender.getStringCellValue().isEmpty()) {
+				errorFields.add("Gender is missing");
 				fields.add("Gender");
 			}
 
 			Cell dob = row.getCell(5);
 			if (dob == null || dob.getDateCellValue() == null) {
-				errorFields.add("Date of Birth of " + row.getRowNum() + " row is missing");
+				errorFields.add("Date of Birth of is missing");
 				fields.add("Date of Birth");
 			}
 
 			Cell panNumber = row.getCell(6);
-			if (panNumber == null || panNumber.getStringCellValue() == null || panNumber.getStringCellValue().isEmpty()) {
-				errorFields.add("Pan Number of " + row.getRowNum() + " row is missing");
+			if (panNumber == null || panNumber.getStringCellValue().isEmpty()) {
+				errorFields.add("Pan Number is missing");
+				fields.add("Pan Number");
+			} else if (!panNumber.getStringCellValue().matches("^[A-Z]{5}[0-9]{4}[A-Z]$")
+					|| proposerDetailsRepository.existsByPanNumber(panNumber.getStringCellValue())) {
+				errorFields.add("Pan Number is Invalid or Already Exists");
 				fields.add("Pan Number");
 			}
 
 			Cell aadharNumber = row.getCell(7);
-			if (aadharNumber == null || aadharNumber.getNumericCellValue() == 0) {
-				errorFields.add("Aadhar Number of " + row.getRowNum() + " row is missing");
+			Long aadharLength = (long) aadharNumber.getNumericCellValue();
+			if (aadharNumber == null || aadharNumber.getNumericCellValue() == 0
+					|| aadharLength.toString().length() != 12) {
+				errorFields.add("Aadhar Number is missing or Invalid");
+				fields.add("Aadhar Number");
+			} else if (proposerDetailsRepository.existsByAadharNo((long) aadharNumber.getNumericCellValue())) {
+				errorFields.add("Aadhar Number Already Exists");
 				fields.add("Aadhar Number");
 			}
 
 			Cell maritalStatus = row.getCell(8);
-			if (maritalStatus == null || maritalStatus.getStringCellValue() == null || maritalStatus.getStringCellValue().isEmpty()) {
-				errorFields.add("Marital Status of " + row.getRowNum() + " row is missing");
+			if (maritalStatus == null || maritalStatus.getStringCellValue().isEmpty()) {
+				errorFields.add("Marital Status is missing");
 				fields.add("Marital Status");
 			}
 
 			Cell emailId = row.getCell(9);
-			if (emailId == null || emailId.getStringCellValue() == null || emailId.getStringCellValue().isEmpty()) {
-				errorFields.add("Email Id of " + row.getRowNum() + " row is missing");
+			if (emailId == null || emailId.getCellType() == CellType.BLANK) {
+				errorFields.add("Email Id is missing");
+				fields.add("Email Id");
+			} else if (proposerDetailsRepository.existsByProposerEmail(emailId.getStringCellValue())) {
+				errorFields.add("Email Id Already Exists");
 				fields.add("Email Id");
 			}
 
 			Cell mobileNumber = row.getCell(10);
-			if (mobileNumber == null || mobileNumber.getNumericCellValue() == 0) {
-				errorFields.add("Mobile Number of " + row.getRowNum() + " row is missing");
+			Long mobileLength = (long) mobileNumber.getNumericCellValue();
+			if (mobileNumber == null || mobileLength.toString().length() != 10) {
+				errorFields.add("Mobile Number is missing or Invalid");
+				fields.add("Mobile Number");
+			} else if (proposerDetailsRepository.existsByProposerMobileNo((long) mobileNumber.getNumericCellValue())) {
+				errorFields.add("Mobile Number Already Exists");
 				fields.add("Mobile Number");
 			}
 
 			Cell address = row.getCell(12);
-			if (address == null || address.getStringCellValue() == null || address.getStringCellValue().isEmpty()) {
-				errorFields.add("Address of " + row.getRowNum() + " row is missing");
+			if (address == null || address.getStringCellValue().isEmpty()) {
+				errorFields.add("Address is missing");
 				fields.add("Address");
 			}
 
 			Cell pincode = row.getCell(15);
-			if (pincode == null || pincode.getNumericCellValue() == 0) {
-				errorFields.add("Pincode of " + row.getRowNum() + " row is missing");
-				fields.add("Pincode");
-			}
-			
-			if(pincode.toString().length()!=6) {
-				errorFields.add("Pincode of " + row.getRowNum() + " row is not valid");
+			Long pinLength = (long) pincode.getNumericCellValue();
+			if (pincode == null || pincode.getNumericCellValue() == 0 || pinLength.toString().length() != 6) {
+				errorFields.add("Pincode is missing or not Valid");
 				fields.add("Pincode");
 			}
 
 			Cell city = row.getCell(16);
-			if (city == null || city.getStringCellValue() == null || city.getStringCellValue().isEmpty()) {
-				errorFields.add("City of " + row.getRowNum() + " row is missing");
+			if (city == null || city.getStringCellValue().isEmpty()) {
+				errorFields.add("City is missing");
 				fields.add("City");
 			}
 
 			Cell state = row.getCell(17);
-			if (state == null || state.getStringCellValue() == null || state.getStringCellValue().isEmpty()) {
-				errorFields.add("State of " + row.getRowNum() + " row is missing");
+			if (state == null || state.getStringCellValue().isEmpty()) {
+				errorFields.add("State is missing");
 				fields.add("State");
 			}
 
@@ -946,12 +986,31 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 				errors.addAll(errorFields);
 
-				ErrorDetails errorDetails = new ErrorDetails();
-				errorDetails.setError(String.join(", ", errors));
-				errorDetails.setErrorField(String.join(", ", fields));
-				errorDetails.setStatus("Fail");
+				int k = 0;
+				for (String individualError : errorFields) {
 
-				errorDetailsRepository.save(errorDetails);
+					ErrorDetails errorDetails = new ErrorDetails();
+					errorDetails.setError(individualError);
+					errorDetails.setErrorField(fields.get(k));
+					errorDetails.setStatus("Fail");
+					errorDetails.setRowIndex(row.getRowNum());
+
+//					XSSFRow dataRow = exportSheet.createRow(dataRowIndex);
+//					dataRow.createCell(0).setCellValue(individualError);
+//					dataRow.createCell(1).setCellValue(fields.get(k));
+//					dataRow.createCell(2).setCellValue("Fail");
+//					dataRow.createCell(3).setCellValue(row.getRowNum());
+//					dataRowIndex++;
+
+					errorDetailsRepository.save(errorDetails);
+					k++;
+				}
+
+				Cell errorMessage = row.createCell(lastCol);
+				Cell status = row.createCell(lastCol + 1);
+
+				errorMessage.setCellValue(String.join(", ", errorFields));
+				status.setCellValue("fail");
 
 			} else {
 				ProposerDetailsEntity entity = new ProposerDetailsEntity();
@@ -982,14 +1041,36 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				ProposerDetailsEntity save = proposerDetailsRepository.save(entity);
 
 				ErrorDetails errorDetails = new ErrorDetails();
-				errorDetails.setError(save.getProposerId().toString());
+				errorDetails.setError("Proposer saved with id: " + save.getProposerId());
 				errorDetails.setErrorField(null);
 				errorDetails.setStatus("Success");
+				errorDetails.setRowIndex(row.getRowNum());
+
+//				XSSFRow dataRow = exportSheet.createRow(dataRowIndex);
+//				dataRow.createCell(0).setCellValue(save.getProposerId().toString());
+//				dataRow.createCell(1).setCellValue("");
+//				dataRow.createCell(2).setCellValue("Success");
+//				dataRow.createCell(3).setCellValue(row.getRowNum());
+//				dataRowIndex++;
 
 				errorDetailsRepository.save(errorDetails);
 
+				Cell errorMessage = row.createCell(lastCol);
+				Cell status = row.createCell(lastCol + 1);
+
+				errorMessage.setCellValue(save.getProposerId().toString());
+				status.setCellValue("success");
+
 			}
 
+		}
+
+		String uid = UUID.randomUUID().toString().substring(0, 3);
+		String fileName = "ErrorResponse" + uid + ".xlsx";
+		String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
+
+		try (FileOutputStream out = new FileOutputStream(filePath)) {
+			workbook.write(out);
 		}
 
 		workbook.close();
@@ -999,6 +1080,457 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		}
 
 		return "All Proposers Saved";
+	}
+
+	@Override
+	public String queueExcel(MultipartFile file) throws IOException {
+		
+		Workbook workbook = new XSSFWorkbook(file.getInputStream());
+
+		Sheet sheet = workbook.getSheetAt(0);
+
+		List<String> errors = new ArrayList<>();
+		
+		int totalRows = sheet.getLastRowNum();
+		int batchSize = 3 ;
+		
+		if(totalRows > 5) {
+		    String uid = UUID.randomUUID().toString().substring(0, 4);
+		    String fileName = "QueueFile" + uid + ".xlsx";
+		    String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
+		    
+		    try (FileOutputStream out = new FileOutputStream(filePath)) {
+		        workbook.write(out);
+		    }
+		    
+		    BatchQueue batchQueue = new BatchQueue();
+		    batchQueue.setFilePath(filePath);
+		    batchQueue.setRowCount(totalRows);
+		    batchQueue.setIsProcess("N");
+		    batchQueue.setRowRead(0);
+		    batchQueue.setStatus("N");
+		    batchQueue.setLastProcessCount(batchSize);
+		    
+		    batchQueueRepository.save(batchQueue);
+		    
+		    workbook.close();
+		    
+		    return "File goes for batch processing";
+		    
+		    
+		}
+		
+//		  if (rowRead % batchSize == 0 || i == totalRows) {
+//			  	System.out.println("XYZ"+rowRead % batchSize);
+//	            batchQueue.setRowRead(rowRead);
+//	            batchQueue.setLastProcessCount(batchSize);
+//	            batchQueue.setIsProcess("Y"); 
+//	            batchQueue.setStatus(rowRead == totalRows ? "COMPLETED" : "IN_PROCESS");
+//	            
+//	            batchQueueRepository.save(batchQueue);
+//	        }
+		
+
+		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
+			Row row = sheet.getRow(i);
+
+			if (row == null) {
+				continue;
+			}
+
+			List<String> errorFields = new ArrayList<>();
+			List<String> fields = new ArrayList<>();
+
+			Cell firstName = row.getCell(1);
+			if (firstName == null || firstName.getStringCellValue().isEmpty()) {
+				errorFields.add("First Name is missing");
+				fields.add("First Name");
+
+			}
+
+			Cell middleName = row.getCell(2);
+			if (middleName == null || middleName.getStringCellValue().isEmpty()) {
+				errorFields.add("Middle Name is missing");
+				fields.add("Middle Name");
+			}
+
+			Cell lastName = row.getCell(3);
+			if (lastName == null || lastName.getStringCellValue().isEmpty()) {
+				errorFields.add("Last Name is missing");
+				fields.add("Last Name");
+			}
+
+			Cell gender = row.getCell(4);
+			if (gender == null || gender.getStringCellValue().isEmpty()) {
+				errorFields.add("Gender is missing");
+				fields.add("Gender");
+			}
+
+			Cell dob = row.getCell(5);
+			if (dob == null || dob.getDateCellValue() == null) {
+				errorFields.add("Date of Birth of is missing");
+				fields.add("Date of Birth");
+			}
+
+			Cell panNumber = row.getCell(6);
+			if (panNumber == null || panNumber.getStringCellValue().isEmpty()) {
+				errorFields.add("Pan Number is missing");
+				fields.add("Pan Number");
+			} else if (!panNumber.getStringCellValue().matches("^[A-Z]{5}[0-9]{4}[A-Z]$")
+					|| proposerDetailsRepository.existsByPanNumber(panNumber.getStringCellValue())) {
+				errorFields.add("Pan Number is Invalid or Already Exists");
+				fields.add("Pan Number");
+			}
+
+			Cell aadharNumber = row.getCell(7);
+			Long aadharLength = (long) aadharNumber.getNumericCellValue();
+			if (aadharNumber == null || aadharNumber.getNumericCellValue() == 0
+					|| aadharLength.toString().length() != 12) {
+				errorFields.add("Aadhar Number is missing or Invalid");
+				fields.add("Aadhar Number");
+			} else if (proposerDetailsRepository.existsByAadharNo((long) aadharNumber.getNumericCellValue())) {
+				errorFields.add("Aadhar Number Already Exists");
+				fields.add("Aadhar Number");
+			}
+
+			Cell maritalStatus = row.getCell(8);
+			if (maritalStatus == null || maritalStatus.getStringCellValue().isEmpty()) {
+				errorFields.add("Marital Status is missing");
+				fields.add("Marital Status");
+			}
+
+			Cell emailId = row.getCell(9);
+			if (emailId == null || emailId.getCellType() == CellType.BLANK) {
+				errorFields.add("Email Id is missing");
+				fields.add("Email Id");
+			} else if (proposerDetailsRepository.existsByProposerEmail(emailId.getStringCellValue())) {
+				errorFields.add("Email Id Already Exists");
+				fields.add("Email Id");
+			}
+
+			Cell mobileNumber = row.getCell(10);
+			Long mobileLength = (long) mobileNumber.getNumericCellValue();
+			if (mobileNumber == null || mobileLength.toString().length() != 10) {
+				errorFields.add("Mobile Number is missing or Invalid");
+				fields.add("Mobile Number");
+			} else if (proposerDetailsRepository.existsByProposerMobileNo((long) mobileNumber.getNumericCellValue())) {
+				errorFields.add("Mobile Number Already Exists");
+				fields.add("Mobile Number");
+			}
+
+			Cell address = row.getCell(12);
+			if (address == null || address.getStringCellValue().isEmpty()) {
+				errorFields.add("Address is missing");
+				fields.add("Address");
+			}
+
+			Cell pincode = row.getCell(15);
+			Long pinLength = (long) pincode.getNumericCellValue();
+			if (pincode == null || pincode.getNumericCellValue() == 0 || pinLength.toString().length() != 6) {
+				errorFields.add("Pincode is missing or not Valid");
+				fields.add("Pincode");
+			}
+
+			Cell city = row.getCell(16);
+			if (city == null || city.getStringCellValue().isEmpty()) {
+				errorFields.add("City is missing");
+				fields.add("City");
+			}
+
+			Cell state = row.getCell(17);
+			if (state == null || state.getStringCellValue().isEmpty()) {
+				errorFields.add("State is missing");
+				fields.add("State");
+			}
+
+			if (errorFields != null && !errorFields.isEmpty()) {
+
+				errors.addAll(errorFields);
+
+				int k = 0;
+				for (String individualError : errorFields) {
+
+					ErrorDetails errorDetails = new ErrorDetails();
+					errorDetails.setError(individualError);
+					errorDetails.setErrorField(fields.get(k));
+					errorDetails.setStatus("Fail");
+					errorDetails.setRowIndex(row.getRowNum());
+
+					errorDetailsRepository.save(errorDetails);
+					k++;
+				}
+
+			} else {
+				ProposerDetailsEntity entity = new ProposerDetailsEntity();
+
+				entity.setTitle(Title.valueOf(row.getCell(0).getStringCellValue()));
+				entity.setProposerFirstName(firstName.getStringCellValue());
+				entity.setProposerMiddleName(middleName.getStringCellValue());
+				entity.setProposerLastName(lastName.getStringCellValue());
+				entity.setProposerGender(Gender.valueOf(gender.getStringCellValue()));
+				Date utilDate = dob.getDateCellValue(); // java.util.Date
+				if (utilDate != null) {
+					java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
+					entity.setDateOfBirth(sqlDate);
+				}
+				entity.setPanNumber(panNumber.getStringCellValue());
+				entity.setAadharNo((long) aadharNumber.getNumericCellValue());
+				entity.setMaritalStatus(Marital_Status.valueOf(maritalStatus.getStringCellValue()));
+				entity.setProposerEmail(emailId.getStringCellValue());
+				entity.setProposerMobileNo((long) mobileNumber.getNumericCellValue());
+				entity.setAlterMobileNo((long) row.getCell(11).getNumericCellValue());
+				entity.setAddressLine1(address.getStringCellValue());
+				entity.setAddressLine2(row.getCell(13).getStringCellValue());
+				entity.setAddressLine3(row.getCell(14).getStringCellValue());
+				entity.setPincode((long) pincode.getNumericCellValue());
+				entity.setCity(city.getStringCellValue());
+				entity.setState(state.getStringCellValue());
+
+				ProposerDetailsEntity save = proposerDetailsRepository.save(entity);
+
+				ErrorDetails errorDetails = new ErrorDetails();
+				errorDetails.setError("Proposer saved with id: " + save.getProposerId());
+				errorDetails.setErrorField(null);
+				errorDetails.setStatus("Success");
+				errorDetails.setRowIndex(row.getRowNum());
+
+				errorDetailsRepository.save(errorDetails);
+
+			}
+			
+//			rowRead++;
+//			
+//			  if (rowRead % batchSize == 0 || i == totalRows) {
+//				  	System.out.println("XYZ"+rowRead % batchSize);
+//		            batchQueue.setRowRead(rowRead);
+//		            batchQueue.setLastProcessCount(batchSize);
+//		            batchQueue.setIsProcess("Y"); 
+//		            batchQueue.setStatus(rowRead == totalRows ? "COMPLETED" : "IN_PROCESS");
+//		            
+//		            batchQueueRepository.save(batchQueue);
+//		        }
+
+		}
+
+		String uid = UUID.randomUUID().toString().substring(0, 3);
+		String fileName = "ErrorResponse" + uid + ".xlsx";
+		String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
+
+		try (FileOutputStream out = new FileOutputStream(filePath)) {
+			workbook.write(out);
+		}
+
+		workbook.close();
+
+		if (!errors.isEmpty()) {
+			return String.join(", ", errors);
+		}
+
+		return "All Proposers Saved";
+	}
+
+	@Override
+	@Scheduled(fixedDelay = 5000)
+	public void batchProcessing() throws FileNotFoundException {
+		
+		List<BatchQueue> batchQueues = batchQueueRepository.findByIsProcess("N");
+		
+		for (BatchQueue batchQueue : batchQueues) {
+			
+			batchQueueRepository.save(batchQueue);
+			
+			try {
+				Workbook workbook = new XSSFWorkbook(batchQueue.getFilePath());
+				
+				Sheet sheet = workbook.getSheetAt(0);
+				
+				int rowStart = batchQueue.getRowRead()+1;
+				int totalRows = batchQueue.getRowCount();
+				int batchSize = 3;
+				
+				for(int i = rowStart; i <= totalRows && i < rowStart + batchSize; i++) {
+					
+					Row row = sheet.getRow(i);
+
+					if (row == null) {
+						continue;
+					}
+
+					List<String> errorFields = new ArrayList<>();
+					List<String> fields = new ArrayList<>();
+
+					Cell firstName = row.getCell(1);
+					if (firstName == null || firstName.getStringCellValue().isEmpty()) {
+						errorFields.add("First Name is missing");
+						fields.add("First Name");
+
+					}
+
+					Cell middleName = row.getCell(2);
+					if (middleName == null || middleName.getStringCellValue().isEmpty()) {
+						errorFields.add("Middle Name is missing");
+						fields.add("Middle Name");
+					}
+
+					Cell lastName = row.getCell(3);
+					if (lastName == null || lastName.getStringCellValue().isEmpty()) {
+						errorFields.add("Last Name is missing");
+						fields.add("Last Name");
+					}
+
+					Cell gender = row.getCell(4);
+					if (gender == null || gender.getStringCellValue().isEmpty()) {
+						errorFields.add("Gender is missing");
+						fields.add("Gender");
+					}
+
+					Cell dob = row.getCell(5);
+					if (dob == null || dob.getDateCellValue() == null) {
+						errorFields.add("Date of Birth of is missing");
+						fields.add("Date of Birth");
+					}
+
+					Cell panNumber = row.getCell(6);
+					if (panNumber == null || panNumber.getStringCellValue().isEmpty()) {
+						errorFields.add("Pan Number is missing");
+						fields.add("Pan Number");
+					} else if (!panNumber.getStringCellValue().matches("^[A-Z]{5}[0-9]{4}[A-Z]$")
+							|| proposerDetailsRepository.existsByPanNumber(panNumber.getStringCellValue())) {
+						errorFields.add("Pan Number is Invalid or Already Exists");
+						fields.add("Pan Number");
+					}
+
+					Cell aadharNumber = row.getCell(7);
+					Long aadharLength = (long) aadharNumber.getNumericCellValue();
+					if (aadharNumber == null || aadharNumber.getNumericCellValue() == 0
+							|| aadharLength.toString().length() != 12) {
+						errorFields.add("Aadhar Number is missing or Invalid");
+						fields.add("Aadhar Number");
+					} else if (proposerDetailsRepository.existsByAadharNo((long) aadharNumber.getNumericCellValue())) {
+						errorFields.add("Aadhar Number Already Exists");
+						fields.add("Aadhar Number");
+					}
+
+					Cell maritalStatus = row.getCell(8);
+					if (maritalStatus == null || maritalStatus.getStringCellValue().isEmpty()) {
+						errorFields.add("Marital Status is missing");
+						fields.add("Marital Status");
+					}
+
+					Cell emailId = row.getCell(9);
+					if (emailId == null || emailId.getCellType() == CellType.BLANK) {
+						errorFields.add("Email Id is missing");
+						fields.add("Email Id");
+					} else if (proposerDetailsRepository.existsByProposerEmail(emailId.getStringCellValue())) {
+						errorFields.add("Email Id Already Exists");
+						fields.add("Email Id");
+					}
+
+					Cell mobileNumber = row.getCell(10);
+					Long mobileLength = (long) mobileNumber.getNumericCellValue();
+					if (mobileNumber == null || mobileLength.toString().length() != 10) {
+						errorFields.add("Mobile Number is missing or Invalid");
+						fields.add("Mobile Number");
+					} else if (proposerDetailsRepository.existsByProposerMobileNo((long) mobileNumber.getNumericCellValue())) {
+						errorFields.add("Mobile Number Already Exists");
+						fields.add("Mobile Number");
+					}
+
+					Cell address = row.getCell(12);
+					if (address == null || address.getStringCellValue().isEmpty()) {
+						errorFields.add("Address is missing");
+						fields.add("Address");
+					}
+
+					Cell pincode = row.getCell(15);
+					Long pinLength = (long) pincode.getNumericCellValue();
+					if (pincode == null || pincode.getNumericCellValue() == 0 || pinLength.toString().length() != 6) {
+						errorFields.add("Pincode is missing or not Valid");
+						fields.add("Pincode");
+					}
+
+					Cell city = row.getCell(16);
+					if (city == null || city.getStringCellValue().isEmpty()) {
+						errorFields.add("City is missing");
+						fields.add("City");
+					}
+
+					Cell state = row.getCell(17);
+					if (state == null || state.getStringCellValue().isEmpty()) {
+						errorFields.add("State is missing");
+						fields.add("State");
+					}
+
+					if (errorFields != null && !errorFields.isEmpty()) {
+
+						int k = 0;
+						for (String individualError : errorFields) {
+
+							ErrorDetails errorDetails = new ErrorDetails();
+							errorDetails.setError(individualError);
+							errorDetails.setErrorField(fields.get(k));
+							errorDetails.setStatus("Fail");
+							errorDetails.setRowIndex(row.getRowNum());
+
+							errorDetailsRepository.save(errorDetails);
+							k++;
+						}
+
+					} else {
+						ProposerDetailsEntity entity = new ProposerDetailsEntity();
+
+						entity.setTitle(Title.valueOf(row.getCell(0).getStringCellValue()));
+						entity.setProposerFirstName(firstName.getStringCellValue());
+						entity.setProposerMiddleName(middleName.getStringCellValue());
+						entity.setProposerLastName(lastName.getStringCellValue());
+						entity.setProposerGender(Gender.valueOf(gender.getStringCellValue()));
+						Date utilDate = dob.getDateCellValue(); // java.util.Date
+						if (utilDate != null) {
+							java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime());
+							entity.setDateOfBirth(sqlDate);
+						}
+						entity.setPanNumber(panNumber.getStringCellValue());
+						entity.setAadharNo((long) aadharNumber.getNumericCellValue());
+						entity.setMaritalStatus(Marital_Status.valueOf(maritalStatus.getStringCellValue()));
+						entity.setProposerEmail(emailId.getStringCellValue());
+						entity.setProposerMobileNo((long) mobileNumber.getNumericCellValue());
+						entity.setAlterMobileNo((long) row.getCell(11).getNumericCellValue());
+						entity.setAddressLine1(address.getStringCellValue());
+						entity.setAddressLine2(row.getCell(13).getStringCellValue());
+						entity.setAddressLine3(row.getCell(14).getStringCellValue());
+						entity.setPincode((long) pincode.getNumericCellValue());
+						entity.setCity(city.getStringCellValue());
+						entity.setState(state.getStringCellValue());
+
+						ProposerDetailsEntity save = proposerDetailsRepository.save(entity);
+
+						ErrorDetails errorDetails = new ErrorDetails();
+						errorDetails.setError("Proposer saved with id: " + save.getProposerId());
+						errorDetails.setErrorField(null);
+						errorDetails.setStatus("Success");
+						errorDetails.setRowIndex(row.getRowNum());
+
+						errorDetailsRepository.save(errorDetails);
+
+					}
+					
+					batchQueue.setRowRead(i);
+				}
+				
+				if(batchQueue.getRowRead() >= totalRows) {
+					batchQueue.setIsProcess("Y");
+					batchQueue.setStatus("Y");
+				}
+				
+				batchQueueRepository.save(batchQueue);
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 	}
 
 }
