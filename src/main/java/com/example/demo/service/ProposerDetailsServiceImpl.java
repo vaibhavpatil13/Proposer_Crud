@@ -1084,42 +1084,41 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 	@Override
 	public String queueExcel(MultipartFile file) throws IOException {
-		
+
 		Workbook workbook = new XSSFWorkbook(file.getInputStream());
 
 		Sheet sheet = workbook.getSheetAt(0);
 
 		List<String> errors = new ArrayList<>();
-		
+
 		int totalRows = sheet.getLastRowNum();
-		int batchSize = 3 ;
-		
-		if(totalRows > 5) {
-		    String uid = UUID.randomUUID().toString().substring(0, 4);
-		    String fileName = "QueueFile" + uid + ".xlsx";
-		    String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
-		    
-		    try (FileOutputStream out = new FileOutputStream(filePath)) {
-		        workbook.write(out);
-		    }
-		    
-		    BatchQueue batchQueue = new BatchQueue();
-		    batchQueue.setFilePath(filePath);
-		    batchQueue.setRowCount(totalRows);
-		    batchQueue.setIsProcess("N");
-		    batchQueue.setRowRead(0);
-		    batchQueue.setStatus("N");
-		    batchQueue.setLastProcessCount(batchSize);
-		    
-		    batchQueueRepository.save(batchQueue);
-		    
-		    workbook.close();
-		    
-		    return "File goes for batch processing";
-		    
-		    
+		int batchSize = 3;
+
+		if (totalRows > 5) {
+			String uid = UUID.randomUUID().toString().substring(0, 4);
+			String fileName = "QueueFile" + uid + ".xlsx";
+			String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
+
+			try (FileOutputStream out = new FileOutputStream(filePath)) {
+				workbook.write(out);
+			}
+
+			BatchQueue batchQueue = new BatchQueue();
+			batchQueue.setFilePath(filePath);
+			batchQueue.setRowCount(totalRows);
+			batchQueue.setIsProcess("N");
+			batchQueue.setRowRead(0);
+			batchQueue.setStatus("N");
+			batchQueue.setLastProcessCount(batchSize);
+
+			batchQueueRepository.save(batchQueue);
+
+			workbook.close();
+
+			return "File goes for batch processing";
+
 		}
-		
+
 //		  if (rowRead % batchSize == 0 || i == totalRows) {
 //			  	System.out.println("XYZ"+rowRead % batchSize);
 //	            batchQueue.setRowRead(rowRead);
@@ -1129,7 +1128,6 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //	            
 //	            batchQueueRepository.save(batchQueue);
 //	        }
-		
 
 		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 
@@ -1298,7 +1296,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				errorDetailsRepository.save(errorDetails);
 
 			}
-			
+
 //			rowRead++;
 //			
 //			  if (rowRead % batchSize == 0 || i == totalRows) {
@@ -1333,24 +1331,48 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	@Override
 	@Scheduled(fixedDelay = 5000)
 	public void batchProcessing() throws FileNotFoundException {
-		
+//	    long startTime = System.currentTimeMillis(); // Capture start time
+
 		List<BatchQueue> batchQueues = batchQueueRepository.findByIsProcess("N");
-		
+
 		for (BatchQueue batchQueue : batchQueues) {
-			
-			batchQueueRepository.save(batchQueue);
-			
+
 			try {
-				Workbook workbook = new XSSFWorkbook(batchQueue.getFilePath());
-				
+	
+				FileInputStream fis = new FileInputStream(batchQueue.getFilePath());
+				Workbook workbook = new XSSFWorkbook(fis);
 				Sheet sheet = workbook.getSheetAt(0);
+
+				    // Then use this 'sheet' in your logic below
 				
-				int rowStart = batchQueue.getRowRead()+1;
+//				Workbook workbook = new XSSFWorkbook(batchQueue.getFilePath());
+//
+//				Sheet sheet = workbook.getSheetAt(0);
+
+				int rowStart = batchQueue.getRowRead() + 1;
 				int totalRows = batchQueue.getRowCount();
 				int batchSize = 3;
 				
-				for(int i = rowStart; i <= totalRows && i < rowStart + batchSize; i++) {
-					
+				Row headRow = sheet.getRow(0);
+				
+				if (rowStart == 1) {
+					int lastCol = headRow.getLastCellNum();
+
+					headRow.createCell(lastCol).setCellValue("Error Message");
+
+					headRow.createCell(lastCol + 1).setCellValue("Error Status");
+				}
+
+//				int lastCol = headRow.getLastCellNum();
+//					
+//					headRow.createCell(lastCol).setCellValue("Error Message");
+//
+//					headRow.createCell(lastCol + 1).setCellValue("Error Status");
+			
+
+
+				for (int i = rowStart; i <= totalRows && i < rowStart + batchSize; i++) {
+
 					Row row = sheet.getRow(i);
 
 					if (row == null) {
@@ -1432,7 +1454,8 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 					if (mobileNumber == null || mobileLength.toString().length() != 10) {
 						errorFields.add("Mobile Number is missing or Invalid");
 						fields.add("Mobile Number");
-					} else if (proposerDetailsRepository.existsByProposerMobileNo((long) mobileNumber.getNumericCellValue())) {
+					} else if (proposerDetailsRepository
+							.existsByProposerMobileNo((long) mobileNumber.getNumericCellValue())) {
 						errorFields.add("Mobile Number Already Exists");
 						fields.add("Mobile Number");
 					}
@@ -1468,6 +1491,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 						for (String individualError : errorFields) {
 
 							ErrorDetails errorDetails = new ErrorDetails();
+							errorDetails.setQueueId(batchQueue.getQueueId());
 							errorDetails.setError(individualError);
 							errorDetails.setErrorField(fields.get(k));
 							errorDetails.setStatus("Fail");
@@ -1476,6 +1500,27 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 							errorDetailsRepository.save(errorDetails);
 							k++;
 						}
+						
+//						if(i==1) {
+//							Cell errorMessage = row.createCell(row.getLastCellNum()+1);
+//							Cell status = row.createCell(row.getLastCellNum()+2);
+//
+//							errorMessage.setCellValue(String.join(", ", errorFields));
+//							status.setCellValue("fail");
+//						}else {
+//							Cell errorMessage = row.createCell(row.getLastCellNum()-1);
+//							Cell status = row.createCell(row.getLastCellNum());
+//
+//							errorMessage.setCellValue(String.join(", ", errorFields));
+//							status.setCellValue("fail");
+//						}
+						
+						Cell errorMessage = row.createCell(headRow.getLastCellNum()-2);
+						Cell status = row.createCell(headRow.getLastCellNum() - 1);
+
+						errorMessage.setCellValue(String.join(", ", errorFields));
+						status.setCellValue("fail");
+						
 
 					} else {
 						ProposerDetailsEntity entity = new ProposerDetailsEntity();
@@ -1506,31 +1551,112 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 						ProposerDetailsEntity save = proposerDetailsRepository.save(entity);
 
 						ErrorDetails errorDetails = new ErrorDetails();
+						errorDetails.setQueueId(batchQueue.getQueueId());
 						errorDetails.setError("Proposer saved with id: " + save.getProposerId());
 						errorDetails.setErrorField(null);
 						errorDetails.setStatus("Success");
 						errorDetails.setRowIndex(row.getRowNum());
 
 						errorDetailsRepository.save(errorDetails);
+						
+						Cell errorMessage = row.createCell(headRow.getLastCellNum()-2);
+						Cell status = row.createCell(headRow.getLastCellNum() - 1);
+
+						errorMessage.setCellValue(save.getProposerId().toString());
+						status.setCellValue("success");
 
 					}
-					
+
 					batchQueue.setRowRead(i);
+					
 				}
 				
-				if(batchQueue.getRowRead() >= totalRows) {
-					batchQueue.setIsProcess("Y");
+				
+				
+			
+
+				if (batchQueue.getRowRead() >= totalRows) {
 					batchQueue.setStatus("Y");
+					batchQueue.setIsProcess("Y");
+					
+//					Workbook resultWorkbook = new XSSFWorkbook();
+//					Sheet resultSheet = resultWorkbook.createSheet("Response Excel");
+//
+//					
+//					Row row = sheet.getRow(0);
+//					Row resultHeader = resultSheet.createRow(0);
+//					int colCount = row.getLastCellNum();
+//
+//					
+//					for (int i = 0; i < colCount; i++) {
+//					    resultHeader.createCell(i).setCellValue(row.getCell(i).toString());
+//					}
+//
+//					
+//					resultHeader.createCell(colCount).setCellValue("Status");
+//					resultHeader.createCell(colCount + 1).setCellValue("Error Message");
+//
+//					// Fetch all errors for this batch
+//					List<ErrorDetails> allErrors = errorDetailsRepository.findByQueueId(batchQueue.getQueueId());
+//
+//					int rowIndex = 1;
+//					for (ErrorDetails error : allErrors) {
+//					    int errorRowNum = error.getRowIndex();
+//					    Row originalRow = sheet.getRow(errorRowNum);
+//					    if (originalRow == null) continue;
+//
+//					  
+//					    Row resultRow = resultSheet.createRow(rowIndex++);
+//
+//					    
+//					    for (int i = 0; i < colCount; i++) {
+//					        Cell originalCell = originalRow.getCell(i);
+//					        if (originalCell != null) {
+//					            resultRow.createCell(i).setCellValue(originalCell.toString());
+//					        }
+//					    }
+//
+//					    // Add status and error message
+//					    resultRow.createCell(colCount).setCellValue(error.getStatus());
+//					    resultRow.createCell(colCount + 1).setCellValue(error.getError());
+//					}
+//
+//					// Save result file
+//					String resultPath = batchQueue.getFilePath().replace(".xlsx", "_Result.xlsx");
+//					try (FileOutputStream fos = new FileOutputStream(resultPath)) {
+//					    resultWorkbook.write(fos);
+//					}
+//					resultWorkbook.close();
 				}
 				
-				batchQueueRepository.save(batchQueue);
 				
+				
+//				String uid = UUID.randomUUID().toString().substring(0, 4);
+//				String fileName = "QueueFile" + uid + ".xlsx";
+//				String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
+				
+				String filePath = batchQueue.getFilePath();
+
+				try (FileOutputStream out = new FileOutputStream(filePath)) {
+					workbook.write(out);
+	
+				}
+				
+				batchQueue.setFilePath(filePath);
+
+				workbook.close();
+		
+				batchQueueRepository.save(batchQueue);
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
-		
+//		long endTime = System.currentTimeMillis(); // Capture end time
+//	    long duration = endTime - startTime; // Execution time in milliseconds
+
+//	    System.out.println("Batch processing executed in " + startTime + " ms");
 	}
 
 }

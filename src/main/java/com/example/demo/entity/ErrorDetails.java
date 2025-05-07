@@ -23,10 +23,26 @@ public class ErrorDetails {
 	private String errorField;
 	@Column(name = "row_index")
 	private Integer rowIndex;
-	
+	@Column(name = "queue_id")
+	private Integer queueId;
+
 	public ErrorDetails() {
 		// TODO Auto-generated constructor stub
 	}
+	
+	
+
+	public Integer getQueueId() {
+		return queueId;
+	}
+
+
+
+	public void setQueueId(Integer queueId) {
+		this.queueId = queueId;
+	}
+
+
 
 	public Integer getErrorId() {
 		return errorId;
@@ -68,14 +84,20 @@ public class ErrorDetails {
 		this.rowIndex = rowIndex;
 	}
 
-	public ErrorDetails(Integer errorId, String status, String error, String errorField, Integer rowIndex) {
+
+
+	public ErrorDetails(Integer errorId, String status, String error, String errorField, Integer rowIndex,
+			Integer queueId) {
 		super();
 		this.errorId = errorId;
 		this.status = status;
 		this.error = error;
 		this.errorField = errorField;
 		this.rowIndex = rowIndex;
+		this.queueId = queueId;
 	}
+
+	
 
 	
 	
