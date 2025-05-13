@@ -22,10 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.entity.ProposerDetailsEntity;
+import com.example.demo.entity.UserEntity;
 import com.example.demo.pagination.ProposerPagination;
 import com.example.demo.pagination.Searching;
 import com.example.demo.request.RequestDto;
 import com.example.demo.request.RequiredDto;
+import com.example.demo.request.UserDto;
 import com.example.demo.response.ResponseHandler;
 import com.example.demo.service.ProposerDetailsService;
 
@@ -281,5 +283,66 @@ public class ProposerDetailsController {
 
 		return handler;
 	}
+	
+//	
+//	@PostMapping("/add-user")
+//	public ResponseHandler addUser(@RequestBody UserDto userDto){
+//		
+//		ResponseHandler response = new ResponseHandler();
+//		
+//		try {
+//			
+//			String add = service.saveUser(userDto);
+//			
+//				response.setData(add);
+//				response.setStatus(true);
+//				response.setMessage("Success");
+//		
+//		}
+//		catch (IllegalArgumentException e) {
+//			e.printStackTrace();
+//			response.setData(new ArrayList<>());
+//			response.setStatus(false);
+//			response.setMessage(e.getMessage());
+//		}
+//		catch (Exception e) {
+//			e.printStackTrace();
+//			response.setData(new ArrayList<>());
+//			response.setStatus(false);
+//			response.setMessage("failed");
+//		}		
+//		
+//		return response;
+//	}
+//	
+//	
+//	@PutMapping("/update-user/{id}")
+//	public ResponseHandler updateUser(@PathVariable Integer id, @RequestBody UserDto userDto){
+//		
+//		ResponseHandler response = new ResponseHandler();
+//		
+//		try {
+//			String updated = service.updateUser(id, userDto);
+//			response.setData(updated);
+//			response.setStatus(true);
+//			response.setMessage("Success");
+//			
+//		}
+//		catch (IllegalArgumentException e) {
+//			e.printStackTrace();
+//			response.setData(new ArrayList<>());
+//			response.setStatus(false);
+//			response.setMessage(e.getMessage());
+//		}
+//		catch (Exception e) {
+//			e.printStackTrace();
+//			response.setData(new ArrayList<>());
+//			response.setStatus(false);
+//			response.setMessage("failed");
+//		}
+//		
+//		return response;
+//		
+//	}
 
 }

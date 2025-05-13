@@ -27,6 +27,8 @@ import com.example.demo.entity.BatchQueue;
 import com.example.demo.entity.ErrorDetails;
 import com.example.demo.entity.NomineeDetailsEntity;
 import com.example.demo.entity.ProposerDetailsEntity;
+import com.example.demo.entity.UserAddress;
+import com.example.demo.entity.UserEntity;
 import com.example.demo.enums.Gender;
 import com.example.demo.enums.Marital_Status;
 import com.example.demo.enums.Title;
@@ -36,9 +38,13 @@ import com.example.demo.repository.BatchQueueRepository;
 import com.example.demo.repository.ErrorDetailsRepository;
 import com.example.demo.repository.NomineeRepository;
 import com.example.demo.repository.ProposerDetailsRepository;
+import com.example.demo.repository.UserAddressRepository;
+//import com.example.demo.repository.UserRepository;
 import com.example.demo.request.NomineeDto;
 import com.example.demo.request.RequestDto;
 import com.example.demo.request.RequiredDto;
+import com.example.demo.request.UserAddressDto;
+import com.example.demo.request.UserDto;
 import com.example.demo.validation.Validations;
 
 import jakarta.persistence.EntityManager;
@@ -59,6 +65,12 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 	
 	@Autowired
 	private BatchQueueRepository batchQueueRepository;
+	
+//	@Autowired
+//	private UserRepository userRepository;
+	
+	@Autowired
+	private UserAddressRepository addressRepository;
 
 	@Autowired
 	private Validations validations;
@@ -867,7 +879,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //		exportRow.createCell(3).setCellValue("RowIndex");
 
 		List<String> errors = new ArrayList<>();
-		int dataRowIndex = 1;
+		//int dataRowIndex = 1;
 
 		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 
@@ -1338,13 +1350,13 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 		for (BatchQueue batchQueue : batchQueues) {
 
 			try {
-	
+
 				FileInputStream fis = new FileInputStream(batchQueue.getFilePath());
 				Workbook workbook = new XSSFWorkbook(fis);
 				Sheet sheet = workbook.getSheetAt(0);
 
-				    // Then use this 'sheet' in your logic below
-				
+				// Then use this 'sheet' in your logic below
+
 //				Workbook workbook = new XSSFWorkbook(batchQueue.getFilePath());
 //
 //				Sheet sheet = workbook.getSheetAt(0);
@@ -1352,9 +1364,9 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 				int rowStart = batchQueue.getRowRead() + 1;
 				int totalRows = batchQueue.getRowCount();
 				int batchSize = 3;
-				
+
 				Row headRow = sheet.getRow(0);
-				
+
 				if (rowStart == 1) {
 					int lastCol = headRow.getLastCellNum();
 
@@ -1368,8 +1380,6 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //					headRow.createCell(lastCol).setCellValue("Error Message");
 //
 //					headRow.createCell(lastCol + 1).setCellValue("Error Status");
-			
-
 
 				for (int i = rowStart; i <= totalRows && i < rowStart + batchSize; i++) {
 
@@ -1500,7 +1510,7 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 							errorDetailsRepository.save(errorDetails);
 							k++;
 						}
-						
+
 //						if(i==1) {
 //							Cell errorMessage = row.createCell(row.getLastCellNum()+1);
 //							Cell status = row.createCell(row.getLastCellNum()+2);
@@ -1514,13 +1524,12 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //							errorMessage.setCellValue(String.join(", ", errorFields));
 //							status.setCellValue("fail");
 //						}
-						
-						Cell errorMessage = row.createCell(headRow.getLastCellNum()-2);
+
+						Cell errorMessage = row.createCell(headRow.getLastCellNum() - 2);
 						Cell status = row.createCell(headRow.getLastCellNum() - 1);
 
 						errorMessage.setCellValue(String.join(", ", errorFields));
 						status.setCellValue("fail");
-						
 
 					} else {
 						ProposerDetailsEntity entity = new ProposerDetailsEntity();
@@ -1558,8 +1567,8 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 						errorDetails.setRowIndex(row.getRowNum());
 
 						errorDetailsRepository.save(errorDetails);
-						
-						Cell errorMessage = row.createCell(headRow.getLastCellNum()-2);
+
+						Cell errorMessage = row.createCell(headRow.getLastCellNum() - 2);
 						Cell status = row.createCell(headRow.getLastCellNum() - 1);
 
 						errorMessage.setCellValue(save.getProposerId().toString());
@@ -1568,17 +1577,13 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 					}
 
 					batchQueue.setRowRead(i);
-					
+
 				}
-				
-				
-				
-			
 
 				if (batchQueue.getRowRead() >= totalRows) {
 					batchQueue.setStatus("Y");
 					batchQueue.setIsProcess("Y");
-					
+
 //					Workbook resultWorkbook = new XSSFWorkbook();
 //					Sheet resultSheet = resultWorkbook.createSheet("Response Excel");
 //
@@ -1628,28 +1633,26 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 //					}
 //					resultWorkbook.close();
 				}
-				
-				
-				
+
 //				String uid = UUID.randomUUID().toString().substring(0, 4);
 //				String fileName = "QueueFile" + uid + ".xlsx";
 //				String filePath = "C:\\Users\\HP\\Documents\\" + fileName;
-				
+
 				String filePath = batchQueue.getFilePath();
 
 				try (FileOutputStream out = new FileOutputStream(filePath)) {
 					workbook.write(out);
-	
+
 				}
-				
+
 				batchQueue.setFilePath(filePath);
 
 				workbook.close();
-		
+
 				batchQueueRepository.save(batchQueue);
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -1658,5 +1661,81 @@ public class ProposerDetailsServiceImpl implements ProposerDetailsService {
 
 //	    System.out.println("Batch processing executed in " + startTime + " ms");
 	}
+
+//	@Override
+//	public String saveUser(UserDto userDto) {
+//		
+//		UserEntity userEntity = new UserEntity();
+//		
+//		userEntity.setFirstName(userDto.getFirstName());
+//		userEntity.setLastName(userDto.getLastName());
+//		userEntity.setMobileNumber(userDto.getMobileNumber());
+//		userEntity.setUserEmail(userDto.getUserEmail());
+//		
+//		List<UserAddressDto> address = userDto.getAddresses();
+//		
+//		List<UserAddress> list = new ArrayList<>();
+//		
+//		for (UserAddressDto userAddressDto : address) {
+//			
+//			UserAddress userAddress = new UserAddress();
+//			
+//			userAddress.setCity(userAddressDto.getCity());
+//			userAddress.setPincode(userAddressDto.getPincode());
+//			userAddress.setState(userAddressDto.getState());
+//			userAddress.setStreet(userAddressDto.getStreet());
+//			userAddress.setUserEntity(userEntity);
+//			
+//			list.add(userAddress);
+//		}
+//		
+//		userEntity.setAddresses(list);
+//		
+//		userRepository.save(userEntity);
+//		
+//		return "User Added Successfully";
+//	}
+//
+//	@Override
+//	public String updateUser(Integer id, UserDto userDto) {
+//		
+//		Optional<UserEntity> opt = userRepository.findByUserId(id);
+//
+////		if (opt.isPresent()) {
+////
+////			UserEntity existingUser = opt.get();
+////			
+////			existingUser.setFirstName(userDto.getFirstName());
+////			existingUser.setLastName(userDto.getLastName());
+////			existingUser.setMobileNumber(userDto.getMobileNumber());
+////			existingUser.setUserEmail(userDto.getUserEmail());
+////			
+////			UserEntity save = userRepository.save(existingUser);
+////			
+////			List<UserAddressDto> addressDtos = userDto.getAddresses();
+////			
+////			Optional<List<UserAddress>> optional = addressRepository.findByUserId(save.getUserId());
+////			
+////			List<UserAddress> existingAddress = optional.get();
+////
+////			
+////			for(int i=0; i<existingAddress.size(); i++) {
+////				for (UserAddressDto dto : addressDtos) {
+////					
+////					
+////					existingAddress.get(i).setCity(dto.getCity());
+////					existingAddress.get(i).setPincode(dto.getPincode());
+////					existingAddress.get(i).setState(dto.getState());
+////					existingAddress.get(i).setStreet(dto.getStreet());
+////					
+////					addressRepository.save(existingAddress.get(i));
+////				}
+////			}
+////			
+////
+////			return "updated successfully";
+////		}
+//		return "User not found";
+//	}
 
 }

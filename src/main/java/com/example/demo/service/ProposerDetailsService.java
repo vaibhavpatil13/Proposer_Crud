@@ -13,6 +13,7 @@ import com.example.demo.entity.ProposerDetailsEntity;
 import com.example.demo.pagination.ProposerPagination;
 import com.example.demo.request.RequestDto;
 import com.example.demo.request.RequiredDto;
+import com.example.demo.request.UserDto;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -42,5 +43,8 @@ public interface ProposerDetailsService {
 	
 	public void batchProcessing() throws FileNotFoundException;
 	
+//	public String saveUser(UserDto userDto);
+//	
+//	public String updateUser(Integer id, UserDto userDto);
 
 }
